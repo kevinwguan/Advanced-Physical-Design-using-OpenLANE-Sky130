@@ -123,4 +123,63 @@ Die area in .def file in results/floorplan set by distance variable
 ### Theory
 #### Library Binding and Placement
 ##### Netlist binding and initial place design
-Each block given proper width and height
+1. Bind netlist with physical cells
+Each block given proper width and height and can be customized in the library.
+2. Placement
+Must be placed near required pins for better timing.
+##### Optimize placement using estimated wire-length and capacitance
+This stage will estimate wire length and capacitance to incorporate repeaters to retain signal integrity
+##### Final placement optimization
+Wire placement can typically criss-cross each other and resolved using separate metal layers. 
+##### Need for libraries and characterization
+Logic synthesis, floorplanning, placement, clock timing synthesis (cts), routing, static timing analysis implemened with gates and cells which represent library.
+### Lab
+Openlane commands
+```
+run_placement
+```
+Linux terminal
+```
+cd results/placement
+```
+##### Congestion aware placement using RePlAce
+![alt text](img/day2/magic-placement-command.png)
+![alt text](img/day2/magic-placement-gui.png)
+### Theory
+#### Cell design and characterization flows
+##### Inputs for cell design flow
+Standard cells belong to libraries with different sizes and functionality as well as different threshold voltages. 
+Cell design flow include inputs, design steps, and outputs.
+Inputs are defined by PDKs, DRC/LVS, spice models, and library- and user-defined specs. 
+##### Circuit design step
+Specs cover things like cell height, supply voltage, metal layers, pin locations, and drawn gate length.
+Design steps include circuit design, layout design, and characterization.
+NMOS/PMOS network graph is a potential tool for transoforming circuit design to layout design.
+Outputs include CDL file or circuit description language.
+##### Layout design step
+Art of layout - Euler's path and stick diagram
+Output stage also includes GDSII, LEF, and extracted spice list (.cir)
+GDSII is layout file, LEF is width and height of cells, and (.cir) includes parasitic capacitances. 
+After these steps, characterization is done which will provide timing, noise, power .libs, function
+##### Typical characterization flow
+1. Read in models of NMOS/PMOS and tech files
+2. Read extracted spice netlist
+3. Define behavior of buffer
+4. Read subcircuits 
+5. Attach power supplies and gnd 
+6. Apply stimuli
+7. Provide necessary output capacitances
+8. Provide necessary simulation command
+Feed in these steps to GUNA software with a configuration file which generates resulting model for timing, power, and noise characterization.
+#### General timing characterization parameters
+##### Timing threshold definitions
+There are different timing threshold definitions.
+slew_low_rise_thr is about 20% and similarly for slew_high_rise_thr (as well as falling edge)
+Take 50% of in_rise_thr and similarly for output. (as well as falling edge)
+##### Propagation delay and transition time
+Propagation delay is equal to the differenc between output and input thresholds for respective measurements.
+Delay must be positive. Long wires can increase slew and produce negative delay.
+## Day 3 - Design library cell using Magic Layout and ngspice characterization
+### Lab
+#### Labs for CMOS inverter ngspice simulations
+##### IO placer revision
