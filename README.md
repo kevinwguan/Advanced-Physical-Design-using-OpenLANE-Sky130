@@ -14,7 +14,7 @@
 #### Get familiar to open-source EDA tools
 ##### OpenLANE Directory Structure in Detail
 First part includes navigating terminal and the different tools installed on linux. This includes exploring open_pdks and openlane. Open_pdks ensures compatbility of open source tools with existing pdk's. It includes libraries with .ref and .tech extensions that include files related to the process node like timing and lef files as well as the tools utilized in the design of circuits for that node respectively. We will be primiarily using sky130_fd_sc_hd.
-* Openlane commands
+Openlane commands
 ```
 cd OpenLane
 make mount
@@ -79,11 +79,11 @@ Place pins on region between core and die which should be closest to their respe
 Logical cell placement blockage ensures proper placement and floor plan becomes ready for placement and routing.
 ### Lab
 #### Chip Floor planning considerations 
-* Openlane commands
+Openlane commands
 ```
 run_floorplan
 ```
-* Terminal commands
+Terminal commands
 ```
 cd Openlane/configuration
 vim README.md
@@ -95,17 +95,17 @@ vim <4-io.log>
 cd ../../
 vim config.tcl
 cd results/floorplan
-vim *.def
+vim .def
 magic -T </path/to/tech/file> lef read ../../tmp/merged.lef def read </def/file> &
 ```
-* Magic commands - drawing
+Magic commands - drawing
 ```
 <Press s key while hovering over object>
 <Press v key>
 <Right click bottom left, Right click again for top right>
 <Control+z zoom to box>
 ```
-* Magic commands - tcl console
+Magic commands - tcl console
 ```
 what
 ```
@@ -183,3 +183,192 @@ Delay must be positive. Long wires can increase slew and produce negative delay.
 ### Lab
 #### Labs for CMOS inverter ngspice simulations
 ##### IO placer revision
+##### SPICE deck creation for CMOS inverter
+##### SPICE simulation lab for CMOS inverter
+##### Switching Threshold Vm
+##### Static and dynamic simulation of CMOS inverter
+##### Lab steps to git clone vsdstdcelldesign
+#### Inception of Layout and CMOS fabrication process
+##### Create Active regions
+##### Formation of N-well and P-well
+##### Formation of gate terminal
+##### Lightly doped drain (LDD) formation
+##### Source and drain formation
+##### Local interconnect formation
+##### Higher level metal formation
+##### Lab introduction to Sky130 basic layers layout and LEF using inverter
+##### Lab steps to create std cell layout and extract spice netlist
+![alt text](img/day3/git-repo-and-command.png)
+![alt text](img/day3/not-equal.png)
+![alt text](img/day3/ngspice-plot.png)
+![alt text](img/day3/magic-inverter.png)
+![alt text](img/day3/spice.png)
+#### Sky130 Tech File Labs
+##### Lab steps to create final SPICE deck using Sky130 tech
+Connect stimuli for simulation. Change scaling dimension
+Magic commands
+```
+box // to see the proper dimensions for spice deck
+```
+![alt text](img/day3/modified-spice.png)
+##### Lab steps to characterize inverter using sky130 model files
+Ngspice commands
+```
+plot y vs time a
+<increase C3 to 2fF and rerun>
+```
+![alt text](img/day3/20-80-values.png)
+![alt text](img/day3/rise-time.png)
+![alt text](img/day3/rise-delay-points.png)
+![alt text](img/day3/rise-delay-value.png)
+##### Lab introduction to Magic tool options and DRC rules
+[Magic](http://opencircuitdesign.com/magic/index.html)
+Tutorials and additional commands can be found above.
+Technology files contain important information relating to the layout.
+Reading Magic documentation is essential to utilizing every aspect of this tool.
+##### Lab introduction to Sky130 pdk's and steps to download labs
+[open_pdks](http://opencircuitdesign.com/open_pdks/)
+Contains information about using Skywater's PDK with open source tools like magic such as an archive of drc tests for reference.
+Look at Skywater's PDK documentation for further information about DRC rules.
+Potential modification of tech file to change magic behavior.
+##### Lab introduction to Magic and steps to load Sky130 tech-rules
+Errors found in magic can be explained in the Skywater PDK documentation.
+Consult physical design workshop repo for additional work using these EDA tools.
+##### Lab exercise to fix poly.9 error in Sky130 tech-file
+Changing tech file allows correct DRC rules to be displayed. Additional commands needed to populate modifications and for DRC engine to recognize errors.
+##### Lab exercise to implement poly resistor spacing to diff and tap
+Cross-referencing rules in tech file and Skywater documentation necessary for correct layout with no DRC violations.
+##### Lab challenge exercise to describe DRC error as geometrical construct
+##### Lab challenge to find missing or incorrect rules and fix them
+Create a rule utilizing cif that finds errors by subtracting layers instead of implementing as an edge-based rule. Save tech file and load in magic as well as made only when drc full is run. Caution: some layers are not yet implemented in magic or are automatically generated.
+## Day 4
+#### Timing modelling using delay tables
+##### Lab steps to convert grid info to track info
+*Linux terminal commands:*
+```
+magic -d XR -T sky130A.tech sky130_inv.mag &
+vim /path/to/pdk/sky130A/libs.tech/openlane/sky130_fd_sc_hd/tracks.info
+```
+*Magic commands*
+```
+<press g for grid-on>
+help grid
+grid 0.46um 0.34um 0.23um 0.17um
+```
+LEF file contains all the relevant information like pins and ports. Intersection of x and y axis indicates ports can be reached with routing tools.
+![alt text](img/day4/tracks-info.png)
+![alt text](img/day4/magic-grid.png)
+##### Lab steps to convert magic layout to std cell LEF
+*Magic commands*
+```
+edit -> text for converting label to port
+port class <output/input/inout>
+port use <signal/power/ground>
+save sky130_vsdinv.mag
+lef write
+vim *.lef
+```
+*Linux terminal*
+```
+magic -d XR -T sky130A.tech sky130_vsdinv.mag &
+```
+Standard cell required to be odd multiple of base quantity. Must convert required labels into ports.
+![alt text](img/day4/label-text.png)
+![alt text](img/day4/lef.png)
+##### Introduction to timing libs and steps to include new cell in synthesis
+*Linux terminal*
+```
+cd Openlane/designs/picorv32a/src/
+cp vsdstdcelldesign/*.lef ./
+vim vsdstdcelldesign/libs/sky130_fd_sc_hd__typical.lib
+cp vsdstdcelldesign/libs/sky130_fd_sc_hd__* ./
+```
+![alt text](img/day4/terminal.png)
+*Openlane commands*
+```
+cd Openlane
+make mount
+./flow.tcl -interactive
+package require openlane 0.9
+prep -design picorv32a -tag <date> -overwrite
+set lefs [glob $::env(DESIGN_DIR)/src/*.lef]
+add_lefs -src $lefs
+run_synthesis
+```
+Must change lib files in config.tcl
+![alt text](img/day4/success.png)
+##### Introduction to delay tables
+For expected behavior, a designed must verify the timing constraints are met based on load capacitances.
+##### Delay table usage Part 1 
+Delay tables are based on input slew and output load. Depends of CMOS sizing.
+##### Delay table usage Part 2 
+Total delay is calculated by summing up each level. Skew = 0 if identical and driving the same loads.
+##### Lab steps to configure synthesis settings to fix slack and include vsdinv
+*Linux terminal*
+```
+cd OpenLane/configuration
+vim README.md
+cd results/placement
+magic -d XR -T /usr/local/share/pdk/sky130A/libs.tech/magic/sky130A.tech lef read ../../tmp/merged.nom.lef def read picorv32.def &
+```
+*OpenLane commands*
+```
+set ::env(SYNTH_STRATEGY) 1
+echo $::env(SYNTH_STRATEGY)
+echo $::env(SYNTH_BUFFERING)
+echo $::env(SYNTH_SIZING)
+set ::env(SYNTH_SIZING) 1
+echo $::env(SYNTH_DRIVING_CELL)
+run_synthesis
+run_floorplan
+run_placement
+```
+Chip area for module '\picorv32': 99853.267200
+Look at configuration variables in configuration/README.md
+Log files keep track of your changes.
+![alt text](img/day4/merged-lef.png)
+![alt text](img/day4/placement.png)
+![alt text](img/day4/vsd-inv.png)
+![alt text](img/day4/expanded.png)
+#### Timing analysis with ideal clocks using openSTA 
+##### Setup timing analysis and introduction to flip-flop setup time
+From launch flop to capture flop is the max time delay between rising clock edge
+Setup and hold times result from the propagation delay of transistors.
+##### Introduction to clock jitter and uncertainty
+Clock jitter results from variations in the production of the clock voltage perhaps from the PLL circuit.
+This decreases the max time delay between rising clock edges for setup analysis.
+##### Lab steps to configure OpenSTA for post-synth timing analysis
+*Linux terminal*
+```
+cd vsdstdcelldesign/extras
+vim sta.conf
+vim my_base.sdc
+cd OpenLane/scripts/
+vim base.sdc
+sta pre_sta.conf
+```
+![alt text](img/day4/pre-sta.png)
+##### Lab steps to optimize synthesis to reduce setup violations
+*Openlane commands*
+```
+set ::env(SYNTH_MAX_FANOUT) 4
+run_synthesis
+report_net -connections <netlist>
+help replace_cell
+replace_cell <first> <second>
+report_checks -fields {net cap slew input_pins} -digits 4
+```
+Bad slew can propagate when chained.
+##### Lab steps to do basic timing ECO
+*Openlane commands*
+```
+report_checks -from <first> -to <second> -through
+report_tns
+report_wns
+```
+#### Clock tree synthesis TritonCTS and signal integrity
+##### Clock tree routing and buffering using H-Tree algorithm
+Producing 0 skew requires making distance signal travels equal.
+Buffers help reduce the charge time of the load capacitances when placed equally.
+##### Crosstalk and clock net shielding
+Clock net shielding helps preserve the clock signal integrity when wires are coupled.
