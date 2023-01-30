@@ -266,7 +266,7 @@ port class <output/input/inout>
 port use <signal/power/ground>
 save sky130_vsdinv.mag
 lef write
-vim *.lef
+vim .lef
 ```
 *Linux terminal*
 ```
@@ -279,9 +279,9 @@ Standard cell required to be odd multiple of base quantity. Must convert require
 *Linux terminal*
 ```
 cd Openlane/designs/picorv32a/src/
-cp vsdstdcelldesign/*.lef ./
+cp vsdstdcelldesign/.lef ./
 vim vsdstdcelldesign/libs/sky130_fd_sc_hd__typical.lib
-cp vsdstdcelldesign/libs/sky130_fd_sc_hd__* ./
+cp vsdstdcelldesign/libs/sky130_fd_sc_hd__ ./
 ```
 ![alt text](img/day4/terminal.png)
 *Openlane commands*
@@ -291,7 +291,7 @@ make mount
 ./flow.tcl -interactive
 package require openlane 0.9
 prep -design picorv32a -tag <date> -overwrite
-set lefs [glob $::env(DESIGN_DIR)/src/*.lef]
+set lefs [glob $::env(DESIGN_DIR)/src/.lef]
 add_lefs -src $lefs
 run_synthesis
 ```
@@ -371,4 +371,93 @@ report_wns
 Producing 0 skew requires making distance signal travels equal.
 Buffers help reduce the charge time of the load capacitances when placed equally.
 ##### Crosstalk and clock net shielding
-Clock net shielding helps preserve the clock signal integrity when wires are coupled.
+Clock net shielding helps preserve the clock signal integrity from when wires are coupled and crosstalk
+##### Lab steps to run CTS using TritonCTS
+*Openlane commands*
+```
+help write verilog
+write verilog /path/to/results/synthesis/picorv32a-synthesis.v
+run_floorplan
+run_placement
+run_ctc
+```
+##### Lab steps to verify CTS runs
+Linux terminal
+```
+cd OpenLane/scripts
+vim cts.tcl
+cd openroad
+vim OpenLane/designs/picorv32a/src/typical.lib
+```
+Openlane commands
+```
+echo $::env(LIB_SYNTH_COMPLETE)
+echo $::env(LIB_TYPICAL)
+echo $::env(CURRENT_DEF)
+echo $::env(SYNTH_MAX_TRAN)
+echo $::env(CTS_MAX_CAP)
+echo $::env(CTS_CLK_BUFFER_LIST)
+echo $::env(CTS_ROOT_BUFFER)
+```
+#### Timing analysis with real clocks using openSTA 
+##### Setup timing analysis using real clocks
+Path through buffers to launch and capture flop is added to total delay for their respective values.
+theta + delta1 > period + delta2 - setup - uncertainty_setup
+Difference between these two delta is the skew
+RHS is data required time. LHS is data arrival time. RHS - LHS is slack which must be positive to be accepted.
+Setup time is delay for mux1 and hold time is delay for mux2.
+hold: theta + delta1 > hold + delta2
+##### Hold timing analysis using real clocks
+hold: theta + delta1 > hold + delta2 + uncertainty_hold
+RHS is data required time. LHS is data arrival time. LHS - RHS is slack which must be positive to be accepted.
+Different loads attributed to potentially different buffers and wire capacitances.
+##### Lab steps to analyze timing with real clocks using OpenSTA
+type openroad into OpenLane
+```
+read_lef /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/tmp/merged.nom.lef
+read_def /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/results/cts/picorv32.def
+write_db pico_cts.db
+read_db pico_cts.db
+read_verilog /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/results/synthesis/picorv32.v
+read_liberty -max $::env(LIB_FASTEST)
+read_liberty -min $::env(LIB_SLOWEST)
+read_sdc /openlane/designs/picorv32a/src/my_base.sdc
+set_propagated_clock [all_clocks]
+report_checks -path_delay min_max -format full_clock_expanded -digits 4
+```
+##### Lab steps to execute OpenSTA with right timing libraries and CTS assignment
+exit openroad and re-enter openroad
+```
+read_db pico_cts.db
+read_verilog /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/results/synthesis/picorv32.v
+read_liberty $::env(LIB_SYNTH_COMPLETE)
+link_design picorv32
+read_sdc /openlane/designs/picorv32a/src/my_base.sdc
+set_propagated_clock [all_clocks]
+report_checks -path_delay min_max -format full_clock_expanded -digits 4
+echo $::env(CTS_CLOCK_BUFFER_LIST)
+lreplace $::env(CTS_CLOCK_BUFFER_LIST) 0 0
+set ::env(CTS_CLOCK_BUFFER_LIST) [lreplace $::env(CTS_CLOCK_BUFFER_LIST) 0 0]
+```
+##### Lab steps to observe impact of bigger CTS buffers on setup and hold timing
+```
+set ::env(CURRENT_DEF) /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/results/placement/picorv32.def
+run_cts
+openroad
+read_lef /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/tmp/merged.nom.lef
+read_def /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/results/cts/picorv32.def
+write_db pico_cts1.db
+read_db pico_cts1.db
+read_verilog /openlane/designs/picorv32a/runs/RUN_2023.01.30_10.47.53/results/synthesis/picorv32.v
+read_liberty $::env(LIB_SYNTH_COMPLETE)
+link_design picorv32
+read_sdc /openlane/designs/picorv32a/src/my_base.sdc
+set_propagated_clock [all_clocks]
+report_checks -path_delay min_max -format full_clock_expanded -digits 4
+report_clock_skew -hold
+report_clock_skew -setup
+set ::env(CTS_CLOCK_BUFFER_LIST) [linsert $::env(CTS_CLOCK_BUFFER_LIST) <index1> <index2>]
+```
+## Day 5 - Final steps for RTL2GDS using tritonRoute and openSTA
+#### Routing and design rule check (DRC)
+##### Introduction to Maze Routing algorithm
