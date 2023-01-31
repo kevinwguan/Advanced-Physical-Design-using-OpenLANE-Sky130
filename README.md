@@ -460,4 +460,58 @@ set ::env(CTS_CLOCK_BUFFER_LIST) [linsert $::env(CTS_CLOCK_BUFFER_LIST) <index1>
 ```
 ## Day 5 - Final steps for RTL2GDS using tritonRoute and openSTA
 #### Routing and design rule check (DRC)
-##### Introduction to Maze Routing algorithm
+##### Introduction to Maze Routing - Lee's algorithm
+Connects source and target. 4-connected neighbors are incremented.
+##### Lee's Algorithm conclusion
+Physical elements will prevent some paths from being taken. Less bends are better
+##### Design Rule Check 
+There is a minimum wire width due to resolution of masks and correct wire pitch will reduce drc errors.
+Proper wire spacing ensures that there are no short circuits.
+Using more metal layers solves these potential drc errors.
+There are also minimum via width based on wire width rules as well as via spacing to ensure correct results
+#### Power Distribution Network and routing
+##### Lab steps to build power distribution network
+*Openlane commands*
+```
+gen_pdn
+```
+Standard cells must be multiples of 2.72 for power rails.
+##### Lab steps from power straps to std cell power
+Straps help provide power and ground for standard and macro cells.
+##### Basics of global and detail routing and configure TritonRoute
+```
+run_routing
+echo $::env(ROUTING_STRATEGY)
+```
+Routing has a fast route and a detail route
+#### TritonRoute Features
+##### TritonRoute feature 1 - Honors pre-processed route guides
+Performs mixed integer linear programming to obtain feasible solution to routing
+Preprocessing involves initial route, splitting, merging, bridging, and preprocessed guides.
+Metal1 is typically vertical and Metal2 is horizontal as well as proper unit width
+Two guides are connected if same layer and touching or vertically connected when overlapping.
+Unconnected terminals should be overlapped with routing guides
+##### TritonRoute Feature2 & 3 - Inter-guide connectivity and intra- & inter-layer routing
+Each layer should have parallel routing
+##### TritonRoute method to handle connectivity
+Inputs include lef, def, and preprocessed route guides
+Output will be detailed routing solutipn with optimized wire-length and via count
+Constraints are route guide honoring, connectivity constraints and design rules
+Access points and Access point clusters enable proper connectivity found at the intersections of lower and upper layers
+##### Routing topology algorithm and final files list post-route
+```
+Algorithm 1 Optimization of Routing Topology
+for all i = 1 to n-1 do
+    for all j = i+1 to n do
+        cost_i_j <- dist(APC_i, APC_j)
+    end for
+end for
+T <- MST(APCs, COSTs)
+Return e_i_j in set of T
+```
+Any violations can be found in reports/routing/tritonRoute.drc or in log files
+Check tmp/routing for .guide files
+Use provide SPEF_EXTRACTOR python utility to extract parasitic capacitances
+python3 main.py <lef file> <def file>
+Creates a spef file
+![alt text](img/day5/routing.png)
